@@ -42,21 +42,20 @@ fn main() -> io::Result<()> {
                     use log_item::Activity::*;
 
                     let bytes_style = ProgressStyle::with_template(
-                        "{spinner} [{bytes:>11}/{total_bytes:>11}] {prefix:.bold}: {wide_msg}",
+                        "  [{bytes:>11}/{total_bytes:>11}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
                     let bar_style = ProgressStyle::with_template(
-                        "{spinner} {prefix:.bold} ({pos}/{len}) {wide_bar}",
+                        "{prefix:.bold} ({pos}/{len}) {wide_bar}",
                     )
                     .unwrap();
-                    let downloads_style =
-                        ProgressStyle::with_template("{spinner} {prefix:.bold}").unwrap();
+
                     let msg_style =
-                        ProgressStyle::with_template("{spinner} [{elapsed_precise}] {wide_msg}")
+                        ProgressStyle::with_template("  [{elapsed_precise}] {wide_msg}")
                             .unwrap();
                     let log_style = ProgressStyle::with_template(
-                        "{spinner} [{elapsed_precise}] {prefix:.bold}: {wide_msg}",
+                        "  [{elapsed_precise}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
