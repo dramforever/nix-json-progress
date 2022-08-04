@@ -53,7 +53,27 @@ pub enum Activity {
     },
 }
 
-#[derive(Clone, Copy, Debug, TryFromPrimitive, IntoPrimitive)]
+impl Activity {
+    pub fn to_type(&self) -> ActivityType {
+        match self {
+            Activity::Unknown => ActivityType::Unknown,
+            Activity::CopyPath { .. } => ActivityType::CopyPath,
+            Activity::FileTransfer { .. } => ActivityType::FileTransfer,
+            Activity::Realise => ActivityType::Realise,
+            Activity::CopyPaths => ActivityType::CopyPaths,
+            Activity::Builds => ActivityType::Builds,
+            Activity::Build { .. } => ActivityType::Build,
+            Activity::OptimiseStore => ActivityType::OptimiseStore,
+            Activity::VerifyPaths => ActivityType::VerifyPaths,
+            Activity::Substitute { .. } => ActivityType::Substitute,
+            Activity::QueryPathInfo { .. } => ActivityType::QueryPathInfo,
+            Activity::PostBuildHook { .. } => ActivityType::PostBuildHook,
+            Activity::BuildWaiting { .. } => ActivityType::BuildWaiting,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(i64)]
 #[non_exhaustive]
 pub enum ActivityType {

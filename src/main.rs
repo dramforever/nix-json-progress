@@ -8,15 +8,18 @@ use std::{
     time::Duration,
 };
 
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle, WeakProgressBar};
 use log_item::Verbosity;
 
-use crate::utils::store_path_base;
+use crate::{log_item::ActivityType, utils::store_path_base};
 
 fn main() -> io::Result<()> {
     let mut bars = MultiProgress::new();
     let mut activities: HashMap<i64, ProgressBar> = HashMap::new();
     let mut activity_names: HashMap<i64, String> = HashMap::new();
+
+    let mut builds_bar: WeakProgressBar = WeakProgressBar::new();
+    let mut copy_paths_bar: WeakProgressBar = WeakProgressBar::new();
 
     for line in stdin().lines() {
         let line = line?;
@@ -39,7 +42,7 @@ fn main() -> io::Result<()> {
                     use log_item::Activity::*;
 
                     let bytes_style = ProgressStyle::with_template(
-                        "{spinner} {prefix:.bold} [{bytes:>10}/{total_bytes:>10}] {wide_msg}",
+                        "{spinner} [{bytes:>10}/{total_bytes:>10}] {wide_msg}",
                     )
                     .unwrap();
 
@@ -55,24 +58,25 @@ fn main() -> io::Result<()> {
                     )
                     .unwrap();
 
-                    let is_file_transfer = if let FileTransfer { .. } = &activity {
-                        true
-                    } else {
-                        false
-                    };
+                    let activity_type = activity.to_type();
 
                     let bar = ProgressBar::new_spinner().with_message(text);
 
                     let bar = match activity {
-                        CopyPaths => bar.with_style(bar_style).with_prefix("Downloading"),
-                        Builds => bar.with_style(bar_style).with_prefix("Building"),
+                        CopyPaths => {
+                            copy_paths_bar = bar.downgrade();
+                            bar.with_style(bar_style).with_prefix("Downloading")
+                        }
+                        Builds => {
+                            builds_bar = bar.downgrade();
+                            bar.with_style(bar_style).with_prefix("Building")
+                        }
                         Unknown => bar.with_style(msg_style),
                         CopyPath { path, from, to } => bar
                             .with_style(msg_style)
                             .with_prefix(store_path_base(&path)),
                         FileTransfer { uri } => bar
                             .with_style(bytes_style)
-                            .with_prefix("Downloading")
                             .with_message(uri),
                         Realise => bar.with_style(msg_style).with_message("Realising paths"),
                         Build {
@@ -93,12 +97,32 @@ fn main() -> io::Result<()> {
                         BuildWaiting { path, resolved } => bar.with_style(msg_style),
                     };
 
-                    if is_file_transfer {
-                        bar.set_draw_target(ProgressDrawTarget::hidden());
-                        activities.insert(id, bar);
-                    } else {
-                        activities.insert(id, bars.add(bar));
-                    }
+                    let bar = match activity_type {
+                        ActivityType::FileTransfer => {
+                            bar.set_draw_target(ProgressDrawTarget::hidden());
+                            bars.add(bar)
+                        }
+
+                        ActivityType::CopyPath => {
+                            if let Some(parent) = copy_paths_bar.upgrade() {
+                                bars.insert_after(&parent, bar)
+                            } else {
+                                bars.add(bar)
+                            }
+                        }
+
+                        ActivityType::Build => {
+                            if let Some(parent) = builds_bar.upgrade() {
+                                bars.insert_after(&parent, bar)
+                            } else {
+                                bars.add(bar)
+                            }
+                        }
+
+                        _ => bars.add(bar),
+                    };
+
+                    activities.insert(id, bar);
                 }
             }
             log_item::LogItem::Result { id, result } => {
@@ -130,7 +154,12 @@ fn main() -> io::Result<()> {
                             bar.set_position(done as u64);
                             if bar.is_hidden() && done > 0 {
                                 let bar = activities.remove(&id).unwrap();
-                                activities.insert(id, bars.add(bar));
+                                let bar = if let Some(parent) = copy_paths_bar.upgrade() {
+                                    bars.insert_after(&parent, bar)
+                                } else {
+                                    bars.add(bar)
+                                };
+                                activities.insert(id, bar);
                             }
                         }
                         SetExpected {
