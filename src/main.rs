@@ -46,6 +46,11 @@ fn main() -> io::Result<()> {
                     )
                     .unwrap();
 
+                    let bytes_bar_style = ProgressStyle::with_template(
+                        "  [{bytes:>11}/{total_bytes:>11}] {prefix:.bold}: {wide_bar}",
+                    )
+                    .unwrap();
+
                     let bar_style = ProgressStyle::with_template(
                         "{prefix:.bold} ({pos}/{len}) {wide_bar}",
                     )
@@ -74,7 +79,7 @@ fn main() -> io::Result<()> {
                         }
                         Unknown => bar.with_style(msg_style),
                         CopyPath { path, from, to } => bar
-                            .with_style(bytes_style)
+                            .with_style(bytes_bar_style)
                             .with_prefix(format!("Unpacking {}", store_path_base(&path))),
                         FileTransfer { uri } => bar
                             .with_style(bytes_style)
