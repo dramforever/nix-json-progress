@@ -55,6 +55,12 @@ fn main() -> io::Result<()> {
                     )
                     .unwrap();
 
+                    let is_file_transfer = if let FileTransfer { .. } = &activity {
+                        true
+                    } else {
+                        false
+                    };
+
                     let bar = ProgressBar::new_spinner().with_message(text);
 
                     let bar = match activity {
@@ -87,7 +93,12 @@ fn main() -> io::Result<()> {
                         BuildWaiting { path, resolved } => bar.with_style(msg_style),
                     };
 
-                    activities.insert(id, bars.add(bar));
+                    if is_file_transfer {
+                        bar.set_draw_target(ProgressDrawTarget::hidden());
+                        activities.insert(id, bar);
+                    } else {
+                        activities.insert(id, bars.add(bar));
+                    }
                 }
             }
             log_item::LogItem::Result { id, result } => {
@@ -117,6 +128,10 @@ fn main() -> io::Result<()> {
                         } => {
                             bar.set_length(expected as u64);
                             bar.set_position(done as u64);
+                            if bar.is_hidden() && done > 0 {
+                                let bar = activities.remove(&id).unwrap();
+                                activities.insert(id, bars.add(bar));
+                            }
                         }
                         SetExpected {
                             activity_type,
