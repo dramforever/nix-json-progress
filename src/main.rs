@@ -42,7 +42,7 @@ fn main() -> io::Result<()> {
                     use log_item::Activity::*;
 
                     let bytes_style = ProgressStyle::with_template(
-                        "{spinner} [{bytes:>10}/{total_bytes:>10}] {prefix:.bold}: {wide_msg}",
+                        "{spinner} [{bytes:>11}/{total_bytes:>11}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
