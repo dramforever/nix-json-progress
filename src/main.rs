@@ -42,7 +42,7 @@ fn main() -> io::Result<()> {
                     use log_item::Activity::*;
 
                     let bytes_style = ProgressStyle::with_template(
-                        "{spinner} [{bytes:>10}/{total_bytes:>10}] {wide_msg}",
+                        "{spinner} [{bytes:>10}/{total_bytes:>10}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
@@ -50,6 +50,8 @@ fn main() -> io::Result<()> {
                         "{spinner} {prefix:.bold} ({pos}/{len}) {wide_bar}",
                     )
                     .unwrap();
+                    let downloads_style =
+                        ProgressStyle::with_template("{spinner} {prefix:.bold}").unwrap();
                     let msg_style =
                         ProgressStyle::with_template("{spinner} [{elapsed_precise}] {wide_msg}")
                             .unwrap();
@@ -73,10 +75,11 @@ fn main() -> io::Result<()> {
                         }
                         Unknown => bar.with_style(msg_style),
                         CopyPath { path, from, to } => bar
-                            .with_style(msg_style)
-                            .with_prefix(store_path_base(&path)),
+                            .with_style(bytes_style)
+                            .with_prefix(format!("Unpacking {}", store_path_base(&path))),
                         FileTransfer { uri } => bar
                             .with_style(bytes_style)
+                            .with_prefix("Downloading")
                             .with_message(uri),
                         Realise => bar.with_style(msg_style).with_message("Realising paths"),
                         Build {
@@ -91,15 +94,18 @@ fn main() -> io::Result<()> {
                         }
                         OptimiseStore => bar.with_style(msg_style),
                         VerifyPaths => bar.with_style(msg_style),
-                        Substitute { path, uri } => bar.with_style(msg_style),
+                        Substitute { path, uri } => bar,
                         QueryPathInfo { path, uri } => bar.with_style(msg_style),
                         PostBuildHook { path } => bar.with_style(msg_style),
                         BuildWaiting => bar.with_style(msg_style),
                     };
 
                     let bar = match activity_type {
-                        ActivityType::FileTransfer => {
+                        ActivityType::Substitute => {
                             bar.set_draw_target(ProgressDrawTarget::hidden());
+                            bar
+                        }
+                        ActivityType::FileTransfer => {
                             bars.add(bar)
                         }
 
@@ -182,6 +188,10 @@ fn main() -> io::Result<()> {
             log_item::LogItem::UnknownItem(_) => {
                 bars.println(format!("Unknown message: {}", line))?
             }
+        }
+
+        for bar in activities.values() {
+            bar.tick()
         }
     }
 
