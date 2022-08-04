@@ -47,10 +47,7 @@ pub enum Activity {
     PostBuildHook {
         path: String,
     },
-    BuildWaiting {
-        path: String,
-        resolved: String,
-    },
+    BuildWaiting,
 }
 
 impl Activity {
@@ -214,10 +211,7 @@ fn parse_log_item(val: &Value) -> Option<LogItem> {
                     let (path,): (String,) = serde_json::from_value(fields).ok()?;
                     Activity::PostBuildHook { path }
                 }
-                ActivityType::BuildWaiting => {
-                    let (path, resolved): (String, String) = serde_json::from_value(fields).ok()?;
-                    Activity::BuildWaiting { path, resolved }
-                }
+                ActivityType::BuildWaiting => Activity::BuildWaiting,
             };
 
             Some(Start {

@@ -94,7 +94,7 @@ fn main() -> io::Result<()> {
                         Substitute { path, uri } => bar.with_style(msg_style),
                         QueryPathInfo { path, uri } => bar.with_style(msg_style),
                         PostBuildHook { path } => bar.with_style(msg_style),
-                        BuildWaiting { path, resolved } => bar.with_style(msg_style),
+                        BuildWaiting => bar.with_style(msg_style),
                     };
 
                     let bar = match activity_type {
