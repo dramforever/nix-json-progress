@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use log_item::Verbosity;
 
 use crate::utils::store_path_base;
@@ -39,17 +39,19 @@ fn main() -> io::Result<()> {
                     use log_item::Activity::*;
 
                     let bytes_style = ProgressStyle::with_template(
-                        "{spinner} {prefix} [{bytes:>10}/{total_bytes:>10}] {wide_bar}",
+                        "{spinner} {prefix:.bold} [{bytes:>10}/{total_bytes:>10}] {wide_msg}",
                     )
                     .unwrap();
-                    let bar_style =
-                        ProgressStyle::with_template("{spinner} {prefix} ({pos}/{len}) {wide_bar}")
-                            .unwrap();
+
+                    let bar_style = ProgressStyle::with_template(
+                        "{spinner} {prefix:.bold} ({pos}/{len}) {wide_bar}",
+                    )
+                    .unwrap();
                     let msg_style =
                         ProgressStyle::with_template("{spinner} [{elapsed_precise}] {wide_msg}")
                             .unwrap();
                     let log_style = ProgressStyle::with_template(
-                        "{spinner} [{elapsed_precise}] {prefix}: {wide_msg}",
+                        "{spinner} [{elapsed_precise}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
@@ -62,10 +64,11 @@ fn main() -> io::Result<()> {
                         CopyPath { path, from, to } => bar
                             .with_style(msg_style)
                             .with_prefix(store_path_base(&path)),
-                        FileTransfer { uri } => {
-                            bar.with_style(bytes_style).with_prefix("Downloading")
-                        }
-                        Realise => bar.with_style(msg_style),
+                        FileTransfer { uri } => bar
+                            .with_style(bytes_style)
+                            .with_prefix("Downloading")
+                            .with_message(uri),
+                        Realise => bar.with_style(msg_style).with_message("Realising paths"),
                         Build {
                             path,
                             machine,
