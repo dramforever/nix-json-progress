@@ -25,5 +25,20 @@
               };
           in pkgs.callPackage env {};
       });
+
+      packages = eachSystem (system: {
+        nix-json-progress =
+          let
+            func = { rustPlatform }:
+              let cargoToml = with builtins; fromTOML (readFile ./Cargo.toml);
+              in rustPlatform.buildRustPackage {
+                pname = cargoToml.package.name;
+                version = cargoToml.package.version;
+                src = ./.;
+                cargoLock.lockFile = ./Cargo.lock;
+              };
+          in nixpkgs.legacyPackages.${system}.callPackage func {};
+        default = self.packages.${system}.nix-json-progress;
+      });
     };
 }
