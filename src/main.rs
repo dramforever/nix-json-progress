@@ -42,31 +42,30 @@ fn main() -> io::Result<()> {
                     use log_item::Activity::*;
 
                     let bytes_style = ProgressStyle::with_template(
-                        "  [{bytes:>11}/{total_bytes:>11}] {prefix:.bold}: {wide_msg}",
+                        "  [{bytes:>11.blue.bold}/{total_bytes:>11.blue.bold}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
                     let bytes_bar_style = ProgressStyle::with_template(
-                        "  [{bytes:>11}/{total_bytes:>11}] {prefix:.bold}: {wide_bar}",
+                        "  [{bytes:>11.green.bold}/{total_bytes:>11.green.bold}] {prefix:.bold}: {wide_bar}",
                     )
                     .unwrap();
 
-                    let bar_style = ProgressStyle::with_template(
-                        "{prefix:.bold} ({pos}/{len}) {wide_bar}",
-                    )
-                    .unwrap();
+                    let bar_style =
+                        ProgressStyle::with_template("{prefix:.bold} ({pos:.blue.bold}/{len:.blue.bold}) {wide_bar}")
+                            .unwrap();
 
                     let msg_style =
-                        ProgressStyle::with_template("  [{elapsed_precise}] {wide_msg}")
-                            .unwrap();
+                        ProgressStyle::with_template("  [{elapsed_precise:.blue.bold}] {wide_msg}").unwrap();
                     let log_style = ProgressStyle::with_template(
-                        "  [{elapsed_precise}] {prefix:.bold}: {wide_msg}",
+                        "  [{elapsed_precise:.blue.bold}] {prefix:.bold}: {wide_msg}",
                     )
                     .unwrap();
 
                     let activity_type = activity.to_type();
 
-                    let bar = ProgressBar::new_spinner().with_message(text);
+                    let bar = ProgressBar::new_spinner()
+                        .with_message(String::from_utf8(strip_ansi_escapes::strip(text)?).unwrap());
 
                     let bar = match activity {
                         CopyPaths => {
@@ -85,7 +84,10 @@ fn main() -> io::Result<()> {
                             .with_style(bytes_style)
                             .with_prefix("Downloading")
                             .with_message(uri),
-                        Realise => bar.with_style(msg_style).with_message("Realising paths"),
+                        Realise => {
+                            bar.enable_steady_tick(Duration::from_millis(500));
+                            bar.with_style(msg_style).with_message("Realising paths")
+                        }
                         Build {
                             path,
                             machine,
@@ -109,9 +111,7 @@ fn main() -> io::Result<()> {
                             bar.set_draw_target(ProgressDrawTarget::hidden());
                             bar
                         }
-                        ActivityType::FileTransfer => {
-                            bars.add(bar)
-                        }
+                        ActivityType::FileTransfer => bars.add(bar),
 
                         ActivityType::CopyPath => {
                             if let Some(parent) = copy_paths_bar.upgrade() {
@@ -143,7 +143,7 @@ fn main() -> io::Result<()> {
                         FileLinked { size, blocks } => {}
                         BuildLogLine { line } => {
                             let name = activity_names.get(&id).map(|x| x.as_str()).unwrap_or("");
-                            // bars.println(format!("{}> {}", name, line))?;
+                            bars.println(format!("{}> {}", name, line))?;
                             bar.set_message(
                                 String::from_utf8(strip_ansi_escapes::strip(line)?).unwrap(),
                             );
