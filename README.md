@@ -10,12 +10,6 @@ Just a prototype for now. Problems include but are not limited to weird renderin
 $ nix build --log-format internal-json {args} |& nix-json-progress
 ```
 
-## Screenshots
+## Screenshot
 
-- Building several jobs
-
-  ![](images/building.png)
-
-- Downloading paths from binary caches
-
-  ![](images/downloading.png)
+![](images/screenshot.png)
